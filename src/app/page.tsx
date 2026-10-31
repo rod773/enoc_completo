@@ -308,12 +308,15 @@ export default function HomePage() {
         </Button>
         <Button
           variant="ghost"
-          size="icon"
-          className="hidden lg:inline-flex"
+          size="sm"
+          className={`hidden gap-1.5 lg:inline-flex ${sidebarOpen ? "bg-accent font-medium" : ""}`}
           onClick={toggleSidebar}
           aria-label="Mostrar u ocultar índice"
+          aria-pressed={sidebarOpen}
+          data-state={sidebarOpen ? "open" : "closed"}
         >
           <PanelLeft className="size-4" />
+          Índice
         </Button>
 
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
