@@ -77,5 +77,10 @@ export function useSmoothScroll<T extends HTMLElement>(axis: Axis = "y") {
     [scrollTo]
   );
 
-  return { ref, scrollTo, scrollToElement, centerElement };
+  const stop = useCallback(() => {
+    control.current?.stop();
+    control.current = null;
+  }, []);
+
+  return { ref, scrollTo, scrollToElement, centerElement, stop };
 }
