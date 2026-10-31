@@ -1,0 +1,256 @@
+PROMPT PARA CREAR EL PROYECTO "El Libro Completo de Enoc" (Next.js)
+====================================================================
+
+Resumen
+-------
+Crear desde cero un lector web del libro "El Libro Completo de Enoc" con:
+texto de los 193 capítulos, imagen escaneada de la página sincronizada,
+índice navegable por libro/capítulo, lectura por voz (Web Speech API) con
+voz masculina en español y scroll automático animado (framer-motion) mientras
+se lee. Stack: Next.js 16 (App Router, TypeScript) + Tailwind v4 + shadcn
+(Base UI) + framer-motion.
+
+1) ENTORNO Y RESTRICCIONES
+--------------------------
+* Carpeta del proyecto: D:\Descargas\enoc_completo
+* Fuente de datos (SOLO LECTURA, no modificar ni borrar nada):
+  D:\Descargas\El Libro de Enoc completo\
+    - PDF completo del libro
+    - paginas\pagina_001.png ... pagina_193.png  (escaneos ~44 MB en total)
+    - textos\pagina_001.txt ... pagina_193.txt   (texto con artefactos de
+      espaciado ~42.000 por página; NO se usan directamente)
+* OBLIGATORIO: usar yarn (Corepack, yarn 4.15.0) y el linker
+  `nodeLinker: node-modules` en .yarnrc.yml.
+* PROHIBIDO: usar Playwright o cualquier navegador automatizado para
+  verificar. Verificación SOLO con: `yarn lint`, `yarn build`, servidor
+  dev + `Invoke-WebRequest` (PowerShell) y lectura de archivos.
+* No hacer commits (el scaffold crea repo git; dejarlo como está).
+* Windows PowerShell 5.1: nada de `&&`; usar `; if ($?) { }`.
+  Para python con acentos: $env:PYTHONIOENCODING="utf-8".
+* No instalar fuentes de Google en el build si se puede evitar
+  (create-next-app ya añade Geist vía next/font, eso está bien).
+
+2) SCAFFOLD EXACTO
+-------------------
+  cd D:\Descargas
+  npx create-next-app@latest enoc_completo --typescript --app --tailwind \
+    --eslint --no-src-dir? -> usar --src-dir --turbopack --use-yarn -y
+  # (respuesta: TypeScript, App Router, Tailwind, ESLint, src/, Turbopack, yarn)
+
+  # Enlace de módulos node (evita PnP):
+  echo "nodeLinker: node-modules" > .yarnrc.yml
+  yarn install
+
+  # shadcn con shadcn CLI v4 (Base UI, NO Radix). Si `npx shadcn` falla por
+  # caché npx corrupta (ERR_MODULE_NOT_FOUND en execa) usar `yarn dlx shadcn@latest`:
+  yarn dlx shadcn@latest init -y -d
+  yarn dlx shadcn@latest add button slider progress card sheet tabs tooltip \
+    separator scroll-area select badge skeleton collapsible
+
+  yarn add framer-motion
+  yarn add lucide-react   (si no viene ya instalado)
+
+Dependencias clave (package.json):
+  next 16.4.3, react 19.3.0, react-dom 19.3.0, @base-ui/react ^1.9.0,
+  framer-motion ^14.8.0, lucide-react ^1.65.0, cn ^0.5.1,
+  tailwindcss ^4, tw-animate-css ^1.4.0, shadcn ^4.23.0,
+  eslint-config-next 16.4.3, typescript ^5.
+Script extra: "content": "node scripts/build-content.mjs"
+
+NOTAS DE API (shadcn v4 sobre Base UI):
+  * `cn` se importa desde el paquete "cn": import { cn } from "cn"
+    (NO desde @/lib/utils).
+  * Tooltip necesita <TooltipProvider> envolviendo el árbol en layout.tsx.
+  * Sheet/Select/Collapsible usan props de Base UI (open/onOpenChange,
+    value/onValueChange, render={...} para componer triggers).
+  * SelectItem/SelectTrigger admiten size="sm"; Button size="icon"|"icon-sm".
+
+3) PIPELINE DE DATOS (scripts/build-content.mjs)
+------------------------------------------------
+Regenera texto limpio desde el PDF (los TXT originales tienen ~42.200
+espacios corruptos y se dejan intactos) usando `pdftotext` (MiKTeX, ya en
+PATH; emite aviso de seguridad a stderr pero funciona):
+
+  pdftotext -layout -enc UTF-8 "<ruta del PDF>" "%TEMP%\enoc.txt"
+
+Salidas:
+  * public\paginas\pagina_XXX.png   (copiar las 193 imágenes de la fuente)
+  * data\textos\pagina_XXX.txt      (espejo limpio del texto por página)
+  * public\data\index.json          (índice global)
+  * public\data\<sectionId>.json    (capítulos con unidades)
+
+Reglas de segmentación:
+  * Encabezados: líneas en MAYÚSCULAS (regex con espacio: /^[A-ZÁÉÍÓÚÜÑ\s]+$/)
+    que contengan "CAPÍTULO"/capítulo (o "Resumen"/"Análisis") -> nuevo
+    capítulo dentro de la sección actual.
+  * Encabezados que llegan partidos entre páginas se fusionan
+    (ej.: "RESUMEN RECONSTRUIDO DEL" + "LIBRO DE GIGANTES" -> capítulo
+    gigantes-resumen de 12 capítulos).
+  * Unidades (versículos): chequeo secuencial de números -- solo se acepta
+    si n == last+1 o gap <= 3, y la primera letra es mayúscula. Si no, es
+    texto corrido (n = null).
+  * Secciones esperadas (13): preliminares(front), acerca(front),
+    libro-1..libro-5(books, 7/3/4/5/6 capítulos), rollos-mar-muerto,
+    libro-gigantes, gigantes-resumen, evidencia-gigantes,
+    testamento-salomon, referencias-enoc (extras).
+  * Resultado verificado: 192 páginas de texto, 13 secciones, 1312 unidades.
+
+Esquema de public/data/index.json:
+  { "title": string, "subtitle": string,
+    "sections": [ { "id": string, "kind": "front"|"book"|"extra",
+      "num"?: number, "title": string, "page": number,
+      "chapters": [ { "id": string, "num"?: number, "title": string,
+        "subtitle"?: string, "page"?: number, "count": number } ] } ] }
+
+Esquema de public/data/<sectionId>.json:
+  { "id": string, "kind": ..., "title": string,
+    "chapters": [ { ...ChapterMeta, "units": [ { "n": number|null,
+      "text": string, "page": number } ] } ] }
+
+4) ESTRUCTURA DE ARCHIVOS A CREAR
+---------------------------------
+  scripts/build-content.mjs
+  src/lib/types.ts          (Unit, Chapter, ChapterMeta, SectionMeta, BookIndex, SectionData, Chunk, SectionKind)
+  src/lib/chunks.ts         (buildChunks: trocea unidades en chunks <=175 chars
+                            por frases/palabras; firstChunkOfUnit)
+  src/lib/prefs.ts          (Prefs {voiceURI, rate, showImage, theme, sidebar},
+                            Progress {sectionId, chapterId, unit},
+                            load/save con localStorage "enoc.prefs.v1" y
+                            "enoc.progress.v1", DEFAULT_PREFS)
+  src/hooks/use-speech.ts
+  src/hooks/use-smooth-scroll.ts
+  src/components/ui/*       (generados por shadcn)
+  src/components/reader/nav-sidebar.tsx
+  src/components/reader/reader-view.tsx
+  src/components/reader/page-panel.tsx
+  src/components/reader/audio-bar.tsx
+  src/app/layout.tsx        (lang="es", metadata "El Libro Completo de Enoc",
+                            TooltipProvider, Geist fonts)
+  src/app/globals.css
+  src/app/page.tsx          (componente cliente principal)
+  public/data/*, public/paginas/* (generados)
+
+5) ESPECIFICACIÓN DE FUNCIONALIDAD
+-----------------------------------
+A) use-speech.ts (Web Speech API, cola de utterances):
+   - Carga de voces con getVoices() + evento voiceschanged + polling cada
+     250 ms (máx. 4 s); ordenar con rankVoices() (score: lang es +100,
+     es-ES +10, nombre masculino +50, femenino -60, localService +5).
+   - pickDefaultVoice(): busca voz masculina española (nombres tipo
+     Sebastian, Alvaro, Alonso, Jorge, Miguel, Raul, Diego, David, Guy,
+     Roger, Andrew); fallback: cualquier es-ES. En Windows las voces son
+     "Microsoft Sebastian Desktop" (es-ES), "Microsoft Alvaro/Alonso" (es-US),
+     "Microsoft Jorge" (es-MX).
+   - speak(chunks: string[], callbacks, startIndex): cancel() + arranque
+     tras 60 ms; cada utterance encadena al siguiente vía onend/onerror con
+     epoch incrementado (para que cancel/jump no rompan la cadena).
+   - callbacks: onChunk(i) (para resaltar unidad y mover el progreso) y
+     onComplete() (avanzar al siguiente capítulo con autoplay).
+   - pause()/resume()/stop()/jump(chunkIndex, shouldPlay=true).
+   - Keep-alive: setInterval 8 s que llama resume() si playing && !paused
+     (Chromium suspende speechSynthesis).
+   - Propiedades rate/voice se leen de refs actualizadas en cada render;
+     clamp de rate a [0.5, 3]. Si no hay voz => utterance.lang = "es-ES".
+   - Devuelve { supported, voices, playing, paused, index, speak, pause,
+     resume, stop, jump }.
+
+B) use-smooth-scroll.ts (scroll animado con framer-motion):
+   - useSmoothScroll<T>(axis: "y"|"x") => { ref, scrollTo(target, dur),
+     scrollToElement(el, dur), centerElement(el, dur) }.
+   - Usa useMotionValue + animate(position, target, {duration, ease
+     [0.22,1,0.36,1]}) y sincroniza el scrollTop/scrollLeft real.
+   - Cancela la animación en wheel/touchstart/pointerdown (el usuario
+     recupera el control) y limita al máximo del contenedor.
+   - scrollToElement centra el elemento al 22% de la altura (columna de
+     texto); centerElement centra horizontalmente (filmstrip de páginas).
+
+C) reader-view.tsx:
+   - Columna max-w-3xl con cabecera (sección, título del capítulo,
+     subtítulo, "N unidades · página X") animada por capítulo (key).
+   - Lista de unidades: cada una es un div clickeable data-unit="i"; la
+     activa resalta con bg-accent + barra vertical animada (layoutId
+     "active-unit-bar"), número de versículo en primaria, texto con clase
+     `.reading` (serif justificado).
+   - Auto-scroll suave a la unidad activa (useSmoothScroll.scrollToElement)
+     cuando cambia activeUnit o chapter.id.
+   - Estado de carga con skeleton.
+
+D) nav-sidebar.tsx:
+   - Cabecera "ÍNDICE", ScrollArea con 3 grupos (front: Introducción,
+     book: Los cinco libros, extra: Anexos).
+   - Cada sección en Collapsible Base UI; sección activa abierta por
+     defecto (overrides[id] ?? id === sectionId, sin setState en effect).
+   - Cada capítulo es botón con layoutId "nav-active" (fondo animado) y
+     scrollIntoView del activo en un effect (solo DOM).
+   - onSelect(sectionId, chapterId) cierra el Sheet móvil.
+
+E) page-panel.tsx (imagen escaneada):
+   - Cabecera con página actual y total de páginas del capítulo.
+   - Visor grande con <img src="/paginas/pagina_XXX.png"> dentro de un
+     contenedor con scroll vertical animado (axis "y") que vuelve al top
+     al cambiar de página; crossfade con AnimatePresence mode="wait"
+     (x ±20). onError => placeholder.
+   - Filmstrip horizontal de miniaturas (h-14 w-10, object-cover object-top,
+     número abajo sobre bg-black/55), activa con border-primary + ring;
+     centrado automático de la activa (axis "x"); clic => onPageSelect(page)
+     (busca la primera unidad del capítulo con esa page).
+
+F) audio-bar.tsx (footer fijo):
+   - Progress del chunk actual (barra fina arriba) + fila con:
+     botones [SkipBack cap. anterior] [ChevronLeft unidad] [Play/Pausa
+     grande redondo] [ChevronRight unidad] [SkipForward cap. siguiente]
+     [Square detener], todos con Tooltip y disabled según estado.
+   - Texto: "Sección · Capítulo — Versículo N" + "Unidad i de m · p%".
+   - Select de velocidad (0.75× … 2.5×) y Select de voz (nombre limpio
+     sin "Microsoft"/"Desktop" + idioma).
+
+G) page.tsx (orquestador, "use client"):
+   - Al montar: loadPrefs() + tema dark/light en documentElement,
+     fetch /data/index.json => valida progreso guardado (sectionId +
+     chapterId existen) o usa sección "acerca" como inicio; spinner de
+     carga con el título del libro.
+   - fetch de /data/<sectionId>.json con caché en ref (sin re-fetch),
+     loading mientras carga; errores amables.
+   - Estados: index, prefs, sectionId, chapterId, data, activeUnit,
+     chunkIndex, sidebarOpen, navSheetOpen, imageSheetOpen, imageOpen.
+   - startPlayback(unit): speech.speak(chunks.map(text), {onChunk =>
+     setChunkIndex+setActiveUnit, onComplete => siguiente capítulo con
+     {autoplay:true}}, firstChunkOfUnit).
+   - openChapter(sid, cid, {unit, autoplay}): stop + reset de unidad +
+     cambia sección/capítulo + cierra Sheet móvil; autoplay marca
+     pendingPlayRef y un effect arranca la reproducción cuando los chunks
+     están listos (setTimeout 120 ms).
+   - goToUnit(i): mueve unidad/chunk y speech.jump(si está sonando);
+     goToAdjacentUnit/Chapter navegan por la lista plana de capítulos.
+   - Cambiar voz o velocidad: updatePrefs + speech.jump(chunkIndex) dentro
+     de setTimeout(0) (para que los refs se actualicen tras el render).
+   - Persistencia: saveProgress en cada cambio de unidad; savePrefs al
+     cambiar tema/velocidad/voz/sidebar/imagen.
+   - Layout: header (Menu móvil / PanelLeft escritorio, título + subtítulo,
+     botón de imagen con lógica matchMedia >=1280px alterna panel/Sheet,
+     botón de tema) + [NavSidebar fijo 288px en lg, ReaderView, PagePanel
+     360px en xl] + AudioBar + Sheets laterales (izq. índice, der. imagen).
+
+6) STYLING (globals.css)
+------------------------
+* Tailwind v4 (@import "tailwindcss", tw-animate-css, shadcn/tailwind.css).
+* Corregir: --font-sans: var(--font-geist-sans)  (NO auto-referencial).
+* Clase .reading: font-family Georgia/"Iowan Old Style"/serif,
+  text-align justify, hyphens auto, text-wrap pretty.
+* Respetar prefers-reduced-motion (scroll-behavior auto).
+* Tokens de color shadcn default con variante .dark.
+* eslint.config.mjs: desactivar "react-hooks/set-state-in-effect"
+  (bootstrap de localStorage/voz tras montaje; patrón Next.js estándar).
+
+7) VERIFICACIÓN (SIN PLAYWRIGHT)
+--------------------------------
+  yarn lint     -> 0 errores (admitirse warnings de <img>)
+  yarn build    -> compila, TypeScript OK, "/" y "/_not-found" estáticos
+  yarn dev -p 3111 (Start-Process con yarn falla: usar `yarn dev` en
+    background con Start-Process sobre node, o abrir la sesión y luego
+    Invoke-WebRequest en):
+    http://localhost:3111/
+    http://localhost:3111/data/index.json
+    http://localhost:3111/data/libro-1.json
+    http://localhost:3111/paginas/pagina_001.png
+  Comprobar también que public/data/*.json y public/paginas/*.png existen.

@@ -13,6 +13,13 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Bootstrap desde localStorage / speechSynthesis justo después del montaje
+      // (patrón estándar en Next.js para hidratar preferencias del cliente).
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
