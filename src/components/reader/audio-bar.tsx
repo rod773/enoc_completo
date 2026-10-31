@@ -99,9 +99,7 @@ export function AudioBar(props: AudioBarProps) {
   } = props;
 
   return (
-    <footer className="relative z-30 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
-      <Progress value={progress} className="w-full gap-0 rounded-none [&_[data-slot=progress-track]]:h-[3px] [&_[data-slot=progress-track]]:rounded-none" />
-
+    <div className="relative z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-3 py-3 sm:px-5">
         <div className="flex items-center gap-1">
           <IconButton label="Capítulo anterior" disabled={!canPrevChapter || !supported} onClick={onPrevChapter}>
@@ -178,6 +176,8 @@ export function AudioBar(props: AudioBarProps) {
           </Select>
         </div>
       </div>
-    </footer>
+
+      <Progress value={progress} className="w-full gap-0 rounded-none [&_[data-slot=progress-track]]:h-[3px] [&_[data-slot=progress-track]]:rounded-none" />
+    </div>
   );
 }

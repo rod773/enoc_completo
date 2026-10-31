@@ -374,6 +374,30 @@ export default function HomePage() {
         </Button>
       </header>
 
+      <AudioBar
+        playing={speech.playing}
+        paused={speech.paused}
+        supported={speech.supported}
+        progress={progress}
+        position={chapter ? `Unidad ${activeUnit + 1} de ${chapter.count} · ${progress}%` : ""}
+        status={status + (unitLabel ? ` — ${unitLabel}` : "")}
+        voices={speech.voices}
+        voiceURI={prefs?.voiceURI ?? null}
+        rate={prefs?.rate ?? 1}
+        canPrevUnit={activeUnit > 0}
+        canNextUnit={!!chapter && activeUnit < chapter.units.length - 1}
+        canPrevChapter={positionInFlat > 0}
+        canNextChapter={positionInFlat >= 0 && positionInFlat < flatChapters.length - 1}
+        onToggle={handleTogglePlayback}
+        onStop={handleStop}
+        onPrevUnit={() => goToAdjacentUnit(-1)}
+        onNextUnit={() => goToAdjacentUnit(1)}
+        onPrevChapter={() => goToAdjacentChapter(-1)}
+        onNextChapter={() => goToAdjacentChapter(1)}
+        onVoiceChange={handleVoiceChange}
+        onRateChange={handleRateChange}
+      />
+
       <div className="flex min-h-0 flex-1">
         {sidebarOpen ? (
           <aside className="hidden w-72 shrink-0 border-border border-e lg:block">
@@ -416,30 +440,6 @@ export default function HomePage() {
           <aside className="hidden w-[360px] shrink-0 xl:block 2xl:w-[420px]">{imagePanel}</aside>
         ) : null}
       </div>
-
-      <AudioBar
-        playing={speech.playing}
-        paused={speech.paused}
-        supported={speech.supported}
-        progress={progress}
-        position={chapter ? `Unidad ${activeUnit + 1} de ${chapter.count} · ${progress}%` : ""}
-        status={status + (unitLabel ? ` — ${unitLabel}` : "")}
-        voices={speech.voices}
-        voiceURI={prefs?.voiceURI ?? null}
-        rate={prefs?.rate ?? 1}
-        canPrevUnit={activeUnit > 0}
-        canNextUnit={!!chapter && activeUnit < chapter.units.length - 1}
-        canPrevChapter={positionInFlat > 0}
-        canNextChapter={positionInFlat >= 0 && positionInFlat < flatChapters.length - 1}
-        onToggle={handleTogglePlayback}
-        onStop={handleStop}
-        onPrevUnit={() => goToAdjacentUnit(-1)}
-        onNextUnit={() => goToAdjacentUnit(1)}
-        onPrevChapter={() => goToAdjacentChapter(-1)}
-        onNextChapter={() => goToAdjacentChapter(1)}
-        onVoiceChange={handleVoiceChange}
-        onRateChange={handleRateChange}
-      />
 
       <Sheet open={navSheetOpen} onOpenChange={setNavSheetOpen}>
         <SheetContent side="left" className="w-72 p-0 sm:max-w-72">
