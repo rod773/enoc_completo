@@ -67,6 +67,18 @@ export function ReaderView({ section, chapter, loading, activeUnit, onUnitClick 
           </p>
         </motion.header>
 
+        {chapter.page === 1 ? (
+          <motion.img
+            key={`${chapter.id}-cover`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            src="/paginas/pagina_001.png"
+            alt="Portada del libro"
+            className="mb-8 w-full rounded-lg border border-border shadow-sm"
+          />
+        ) : null}
+
         <motion.div
           key={chapter.id}
           initial={{ opacity: 0, y: 14 }}

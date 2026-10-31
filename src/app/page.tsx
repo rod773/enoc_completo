@@ -2,14 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpen, ImageIcon, Menu, Moon, PanelLeft, Sun } from "lucide-react";
+import { BookOpen, Menu, Moon, PanelLeft, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AudioBar } from "@/components/reader/audio-bar";
 import { NavSidebar } from "@/components/reader/nav-sidebar";
-import { PagePanel } from "@/components/reader/page-panel";
 import { ReaderView } from "@/components/reader/reader-view";
 import { firstChunkOfUnit, buildChunks } from "@/lib/chunks";
 import { loadPrefs, loadProgress, savePrefs, saveProgress, type Prefs } from "@/lib/prefs";
@@ -39,8 +37,6 @@ export default function HomePage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [navSheetOpen, setNavSheetOpen] = useState(false);
-  const [imageSheetOpen, setImageSheetOpen] = useState(false);
-  const [imageOpen, setImageOpen] = useState(true);
 
   const cacheRef = useRef<Record<string, SectionData>>({});
   const pendingPlayRef = useRef(false);
@@ -59,15 +55,6 @@ export default function HomePage() {
     [data, chapterId]
   );
   const chunks = useMemo(() => (chapter ? buildChunks(chapter.units) : []), [chapter]);
-
-  const activePage = chapter?.units[activeUnit]?.page ?? chapter?.page ?? section?.page ?? 1;
-  const chapterPages = useMemo(() => {
-    if (!chapter) return [];
-    const pages = new Set<number>();
-    for (const unit of chapter.units) pages.add(unit.page);
-    if (chapter.page) pages.add(chapter.page);
-    return [...pages].sort((a, b) => a - b);
-  }, [chapter]);
 
   const flatChapters: FlatChapter[] = useMemo(() => {
     if (!index) return [];
@@ -133,7 +120,6 @@ export default function HomePage() {
     setPrefs(stored);
     document.documentElement.classList.toggle("dark", stored.theme === "dark");
     setSidebarOpen(stored.sidebar);
-    setImageOpen(stored.showImage);
 
     let cancelled = false;
     fetch("/data/index.json")
@@ -275,24 +261,6 @@ export default function HomePage() {
     });
   };
 
-  const toggleImage = () => {
-    const wide = typeof window !== "undefined" && window.matchMedia("(min-width: 1280px)").matches;
-    if (wide) {
-      setImageOpen((prev) => {
-        savePrefs({ ...prefs!, showImage: !prev });
-        return !prev;
-      });
-    } else {
-      setImageSheetOpen(true);
-    }
-  };
-
-  const handlePageSelect = (page: number) => {
-    if (!chapter) return;
-    const unit = chapter.units.findIndex((u) => u.page === page);
-    if (unit >= 0) goToUnit(unit, speech.playing);
-  };
-
   const status = section && chapter ? `${section.title} · ${chapter.title}` : "El Libro Completo de Enoc";
   const progress =
     chunks.length > 0 ? Math.round(((chunkIndex + 1) / chunks.length) * 100) : 0;
@@ -301,12 +269,6 @@ export default function HomePage() {
       ? `Versículo ${chapter.units[activeUnit].n}`
       : `Unidad ${activeUnit + 1}`
     : "";
-
-  const imagePanel = chapter ? (
-    <PagePanel page={activePage} pages={chapterPages} onPageSelect={handlePageSelect} />
-  ) : (
-    <Skeleton className="m-3 h-[calc(100%-1.5rem)] rounded-md" />
-  );
 
   if (!ready || !index) {
     return (
@@ -361,13 +323,6 @@ export default function HomePage() {
             <p className="truncate text-[11px] leading-tight text-muted-foreground">{index.subtitle}</p>
           </div>
         </div>
-
-        <Tooltip>
-          <TooltipTrigger render={<Button variant="ghost" size="icon" onClick={toggleImage} aria-label="Imagen de la página" />}>
-            <ImageIcon className="size-4" />
-          </TooltipTrigger>
-          <TooltipContent>Imagen de la página</TooltipContent>
-        </Tooltip>
 
         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Cambiar tema">
           {prefs?.theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
@@ -435,10 +390,6 @@ export default function HomePage() {
             </motion.div>
           </AnimatePresence>
         </main>
-
-        {imageOpen ? (
-          <aside className="hidden w-[360px] shrink-0 xl:block 2xl:w-[420px]">{imagePanel}</aside>
-        ) : null}
       </div>
 
       <Sheet open={navSheetOpen} onOpenChange={setNavSheetOpen}>
@@ -450,13 +401,6 @@ export default function HomePage() {
             chapterId={chapterId ?? ""}
             onSelect={(sid, cid) => openChapter(sid, cid)}
           />
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={imageSheetOpen} onOpenChange={setImageSheetOpen}>
-        <SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-md">
-          <SheetTitle className="sr-only">Página escaneada</SheetTitle>
-          <div className="min-h-0 flex-1">{imagePanel}</div>
         </SheetContent>
       </Sheet>
     </div>

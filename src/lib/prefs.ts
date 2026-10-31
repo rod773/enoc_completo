@@ -1,7 +1,6 @@
 export interface Prefs {
   voiceURI: string | null;
   rate: number;
-  showImage: boolean;
   theme: "light" | "dark";
   sidebar: boolean;
 }
@@ -15,7 +14,6 @@ export interface Progress {
 export const DEFAULT_PREFS: Prefs = {
   voiceURI: null,
   rate: 1,
-  showImage: true,
   theme: "light",
   sidebar: true,
 };
