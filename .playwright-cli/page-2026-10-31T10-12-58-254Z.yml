@@ -1,0 +1,7 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - img [ref=e4]
+    - heading "El Libro Completo de Enoc" [level=1] [ref=e6]
+    - paragraph [ref=e7]: Cargando índice, capítulos y páginas…
+  - button "Open Next.js Dev Tools" [ref=e17] [cursor=pointer]:
+    - img [ref=e18]
