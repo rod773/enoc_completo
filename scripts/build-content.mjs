@@ -74,6 +74,16 @@ function normalize(text) {
   return out.join("\n");
 }
 
+// Correcciones ortográficas/typográficas de erratas conocidas del PDF fuente.
+function fixTypos(text) {
+  let t = text;
+  t = t.replace(/([¿¡])\s+/g, "$1"); // espacio tras signo invertido
+  t = t.replace(/\s+([,;:])/g, "$1"); // espacio antes de , ; :
+  t = t.replace(/\s+([?!])(?![\p{L}])/gu, "$1"); // espacio antes de ? ! (no pegado a letra)
+  t = t.replace(/\b([\p{L}]{2,})\s+\1\b/giu, "$1"); // palabra repetida inmediata
+  return t;
+}
+
 function titleCase(s) {
   return s
     .toLowerCase()
@@ -322,6 +332,16 @@ function build() {
   }
 
   flushChapter();
+
+  // Aplicar correcciones ortográficas a todo el contenido antes de serializar.
+  for (const s of sections) {
+    if (s.title) s.title = fixTypos(s.title);
+    for (const c of s.chapters) {
+      if (c.title) c.title = fixTypos(c.title);
+      if (c.subtitle) c.subtitle = fixTypos(c.subtitle);
+      for (const u of c.units) u.text = fixTypos(u.text);
+    }
+  }
 
   const usable = sections.filter((s) => s.chapters.length > 0);
   const dropped = sections.filter((s) => s.chapters.length === 0).map((s) => s.id);

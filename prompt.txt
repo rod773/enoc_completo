@@ -142,7 +142,7 @@ C) reader-view.tsx:
    - Portada del libro: si chapter.page === 1, muestra
      <img src="/paginas/pagina_001.png"> a ancho completo con borde/sombra
      entre la cabecera y las unidades.
-   - Unidades: div clickeable data-unit="i"; activa con bg-accent + barra
+   - Unidades: div clicable data-unit="i"; activa con bg-accent + barra
      vertical animada (layoutId "active-unit-bar"), número de versículo en
      primaria, texto con clase `.reading` (serif justificado).
    - Auto-scroll suave a la unidad activa (scrollToElement a ~22%).
@@ -238,7 +238,7 @@ F) page.tsx (orquestador, "use client", ~411 líneas):
 
 9) VERIFICACIÓN
 ---------------
-  yarn lint     -> 0 errores (admitirse warnings de <img>)
+  yarn lint     -> 0 errores (se admiten warnings de <img>)
   yarn build    -> compila, TypeScript OK
   yarn dev      -> comprobar /, /data/index.json, /data/libro-1.json,
                    /paginas/pagina_001.png
@@ -246,7 +246,7 @@ F) page.tsx (orquestador, "use client", ~411 líneas):
 
 10) PRÓXIMOS PASOS POSIBLES (pendientes / ideas)
 ------------------------------------------------
-* Decidir si se reintegra page-viewer/page-thumbs (u opcción de imagen) o
+* Decidir si se reintegra page-viewer/page-thumbs (u opción de imagen) o
   se eliminan page-panel/page-viewer/page-thumbs como código muerto.
 * Si se reintegra el visor de imagen, conectar page-viewer + page-thumbs
   en page.tsx con un Sheet o panel colapsable, reactivando un pref tipo
